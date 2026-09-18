@@ -1,9 +1,77 @@
-class BlocklyModel extends EventTarget
+//  info relevante:
+//   - WorkspaceModel  extends EventTarget   -> guarda el codigo generado
+//   - WorkspaceView   extends HTMLElement   -> el lienzo de Blockly (es con canvas)
+//   - WorkspaceController                   -> conecta Model y View, no se conocen entre si.
+
+// Este archivo usa el CONTRATO definido en Toolbox.js (usa las funciones de toolbox)
+import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './Toolbox.js';
+
+// Se genera el codigo de html
+// Hay un Blockly.Generator para todo el proyecto. 
+// Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo'] 
+// Y se hace a traves de registerAllGenerators(). Este archivo no sabe (ni le importa) 
+// que bloques existen: solo arma el generador y lo deja listo para usarse.
+
+function createHtmlGenerator()
+{
+    var generator = new Blockly.Generator('WebCraftHTML');
+
+    generator.INDENT = '  ';
+
+    // Se ejecuta una vez al empezar a generar codigo para todo el workspace
+
+    generator.init = function (workspace)
+    {
+        // Por ahora no hace falta guardar estado entre bloques(anidados)
+    
+    };
+
+    // Se ejecuta una sola vez al terminar de recorrer todos los bloques
+
+    generator.finish = function (code)
+    {
+        return code;
+    };
+
+    // Encadena el codigo de un bloque con el del bloque conectado debajo
+    // (bloque.getNextBlock()),  es como Blockly arma sentencias en serie.
+
+    generator.scrub_ = function (block, code, opt_thisOnly)
+    {
+        var nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+        var nextCode = (opt_thisOnly || !nextBlock) ? '' : generator.blockToCode(nextBlock);
+        return code + nextCode;
+    };
+
+    registerAllGenerators(generator);
+
+    return generator;
+}
+
+// workspace, generator
+// Recorre los bloques comienza desde arriba del workspace 
+// y les pide al generador el codigo HTMLn de lo que se hace
+// se agrega, mueve, conecta o borra un bloque
+
+function workspaceToData(workspace, generator)
+{
+    if (!workspace || !generator)
+    {
+        return { html: '' };
+    }
+
+    var code = generator.workspaceToCode(workspace);
+
+    return { html: code };
+}
+// modelo
+
+class WorkspaceModel extends EventTarget
 {
     constructor()
     {
         super();
-
+        this.data = { html: '' };
     }
 
     actualizar(data)
@@ -18,99 +86,129 @@ class BlocklyModel extends EventTarget
     }
 }
 
-class BlocklyView extends HTMLElement
+// Vista
+
+class WorkspaceView extends HTMLElement
 {
     constructor()
     {
         super();
+
         this.container = document.createElement('div');
-        this.container.classList.add('blockly-workspace-container');
+        this.container.className = 'blockly-workspace-container';
         this.appendChild(this.container);
+
+        this.workspace = null;
+        this.generator = null;
     }
 
     buildToolbox()
     {
-        // prueba para validar que el mecanismo de arrastre funciona.
-        // Rosmary lo va a reemplazar con los bloques HTML reales.
-        return {
-            kind: 'flyoutToolbox',
-            contents: [
-                { kind: 'block', type: 'controls_if' },
-                { kind: 'block', type: 'logic_compare' },
-                { kind: 'block', type: 'math_number' },
-                { kind: 'block', type: 'text' }
-            ]
-        };
+        registerAllBlocks();
+        this.generator = createHtmlGenerator();
+        return getToolboxDefinition();
+    }
+
+    getWorkspace()
+    {
+        return this.workspace;
+    }
+
+    getGenerator()
+    {
+        return this.generator;
     }
 
     connectedCallback()
     {
-        //el elemento ya está insertado en el document,
-        // así que el container tiene tamaño real y Blockly.inject
-     
-        this.toolbox = this.buildToolbox();
+        var self = this;
+
+        var toolboxDefinition = this.buildToolbox();
+
         this.workspace = Blockly.inject(this.container, {
-            toolbox: this.toolbox
+            toolbox: toolboxDefinition
         });
 
-        var self = this;
-        this.workspace.addChangeListener(function (event) {
+        this.workspace.addChangeListener(function (event)
+        {
+            if (event.isUiEvent)
+            {
+                return;
+            }
+
             self.dispatchEvent(new CustomEvent('request', {
                 detail: { action: 'workspace-changed' }
             }));
         });
     }
 
-    update(data)
+    disconnectedCallback()
     {
-        // subir
+        if (this.workspace)
+        {
+            this.workspace.dispose();
+            this.workspace = null;
+        }
     }
 }
 
-class BlocklyController
+customElements.define('blockly-workspace-view', WorkspaceView);
+
+// Controlador
+
+class WorkspaceController
 {
     constructor(model, view)
     {
         this.model = model;
         this.view = view;
-        this._onModelChanged = this.onModelChanged.bind(this);
-        this._onViewRequest = this.onViewRequest.bind(this);
+
+        this.onViewRequest = this.onViewRequest.bind(this);
+        this.onModelChanged = this.onModelChanged.bind(this);
     }
 
     init()
     {
-        this.model.addEventListener('changed', this._onModelChanged);
-        this.view.addEventListener('request', this._onViewRequest);
+        this.view.addEventListener('request', this.onViewRequest);
+        this.model.addEventListener('changed', this.onModelChanged);
     }
 
     release()
     {
-        this.model.removeEventListener('changed', this._onModelChanged);
-        this.view.removeEventListener('request', this._onViewRequest);
+        this.view.removeEventListener('request', this.onViewRequest);
+        this.model.removeEventListener('changed', this.onModelChanged);
     }
 
     onViewRequest(event)
     {
-        this.model.actualizar(event.detail);
+        if (event.detail.action === 'workspace-changed')
+        {
+            var data = workspaceToData(this.view.getWorkspace(), this.view.getGenerator());
+            this.model.actualizar(data);
+        }
     }
 
     onModelChanged()
     {
-        this.view.update(this.model.getData());
+        var data = this.model.getData();
+
+        // En esta parte va lo de Syls
+        // El componente de Preview 
+
+        document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
+            detail: data
+        }));
     }
 }
 
-customElements.define('blockly-workspace-view', BlocklyView);
 
-function main()
-{
-    let myModel = new BlocklyModel();
-    let myView = new BlocklyView();
-    let myController = new BlocklyController(myModel, myView);
-    myController.init();
-    document.body.appendChild(myView);
-}
+// inicio
 
-window.onload = main;
+var workspaceModel = new WorkspaceModel();
+var workspaceView = document.createElement('blockly-workspace-view');
+document.body.appendChild(workspaceView);
 
-export { BlocklyModel, BlocklyView, BlocklyController };
+var workspaceController = new WorkspaceController(workspaceModel, workspaceView);
+workspaceController.init();
+
+export { WorkspaceModel, WorkspaceView, WorkspaceController, workspaceToData };
