@@ -1,5 +1,4 @@
-
-// El toolbox es un archivo que NO define ningún bloque. 
+// El toolbox es un archivo que NO define ningún bloque.
 // Solo junta las 5 categorías que vienen de frontend/components/...
 //
 // Aca esta el CONTRATO que debe cumplir cada módulo de blocks
@@ -14,20 +13,20 @@
 // Mientras un módulo cumpla ese contrato, quien lo escriba puede
 // cambiar su contenido interno sin tocar este archivo
 // quedaria algo asi:
-import * as EstructuraContenedores from './blocks/estructura-contenedores.blocks.js';
-import * as ContenidoTexto from './blocks/contenido-texto.blocks.js';
-import * as FormulariosControles from './blocks/formularios-controles.blocks.js';
-import * as EstilosDiseno from './blocks/estilos-diseno.blocks.js';
-import * as EstilosTipografia from './blocks/estilos-tipografia.blocks.js';
+import * as ContainersStructure from './blocks/ContainersStructure.js';
+import * as ContentText from './blocks/ContentText.js';
+import * as FormsControls from './blocks/FormsControls.js';
+import * as StyleLayout from './blocks/StyleLayout.js';
+import * as StyleTypography from './blocks/StyleTypography.js';
 
 // Orden = orden en que aparecen las categorías en el toolbox visual (maqueta vista por el profe)
 
 const CATEGORY_MODULES = [
-    EstructuraContenedores,
-    ContenidoTexto,
-    FormulariosControles,
-    EstilosDiseno,
-    EstilosTipografia
+    ContainersStructure,
+    ContentText,
+    FormsControls,
+    StyleLayout,
+    StyleTypography
 ];
 
 function registerAllBlocks()

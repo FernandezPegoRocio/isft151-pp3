@@ -1,4 +1,5 @@
-//  Rosmary Completa esta parte
+
+// Syls 
 
 // Este archivo sigue el CONTRATO de Toolbox.js:
 //   - registerBlocks()          
@@ -9,24 +10,25 @@
 
 function registerBlocks()
 {
-    // Todo de Rosmary para definir la categoria de los bloques
+    // Silvana definelos bloques de esta categoría
+    // (color, font-size en px, text-align, font-family)
 }
 
 function getCategory()
 {
     return {
         kind: 'category',
-        name: 'Estructura y Contenedores',
-        colour: '210', // azul, según la maqueta — no cambiar sin avisar al grupo
+        name: 'Estilos de Tipografía',
+        colour: '0', // rojo, se puede cambiar!
         contents: [
-            // Rosmary vdefine  registerBlocks()
+            // Syls lista
         ]
     };
 }
 
 function registerGenerators(generator)
 {
-    // Rosmary realiza el generator por cada bloque definido arriba
+    // Syls suma el generator
 }
 
 export { registerBlocks, getCategory, registerGenerators };

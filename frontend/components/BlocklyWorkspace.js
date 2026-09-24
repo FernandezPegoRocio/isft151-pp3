@@ -3,13 +3,13 @@
 //   - WorkspaceView   extends HTMLElement   -> el lienzo de Blockly (es con canvas)
 //   - WorkspaceController                   -> conecta Model y View, no se conocen entre si.
 
-// Este archivo usa el CONTRATO definido en Toolbox.js (usa las funciones de toolbox)
-import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './Toolbox.js';
+// Este archivo usa el CONTRATO definido en toolbox.js (usa las funciones de toolbox)
+import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './toolbox.js';
 
 // Se genera el codigo de html
-// Hay un Blockly.Generator para todo el proyecto. 
-// Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo'] 
-// Y se hace a traves de registerAllGenerators(). Este archivo no sabe (ni le importa) 
+// Hay un Blockly.Generator para todo el proyecto.
+// Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo']
+// Y se hace a traves de registerAllGenerators(). Este archivo no sabe (ni le importa)
 // que bloques existen: solo arma el generador y lo deja listo para usarse.
 
 function createHtmlGenerator()
@@ -23,7 +23,7 @@ function createHtmlGenerator()
     generator.init = function (workspace)
     {
         // Por ahora no hace falta guardar estado entre bloques(anidados)
-    
+
     };
 
     // Se ejecuta una sola vez al terminar de recorrer todos los bloques
@@ -49,7 +49,7 @@ function createHtmlGenerator()
 }
 
 // workspace, generator
-// Recorre los bloques comienza desde arriba del workspace 
+// Recorre los bloques comienza desde arriba del workspace
 // y les pide al generador el codigo HTMLn de lo que se hace
 // se agrega, mueve, conecta o borra un bloque
 
@@ -193,7 +193,7 @@ class WorkspaceController
         var data = this.model.getData();
 
         // En esta parte va lo de Syls
-        // El componente de Preview 
+        // El componente de Preview
 
         document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
             detail: data
