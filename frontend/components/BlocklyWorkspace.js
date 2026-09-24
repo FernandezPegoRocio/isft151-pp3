@@ -94,9 +94,11 @@ class WorkspaceView extends HTMLElement
     {
         super();
 
+        // Ojo: el constructor de un Web Component NO puede tocar sus
+        // propios hijos (lo prohíbe la spec de Custom Elements). Por eso
+        // acá solo se crea el <div>, sin insertarlo todavía.
         this.container = document.createElement('div');
         this.container.className = 'blockly-workspace-container';
-        this.appendChild(this.container);
 
         this.workspace = null;
         this.generator = null;
@@ -122,6 +124,9 @@ class WorkspaceView extends HTMLElement
     connectedCallback()
     {
         var self = this;
+
+        // Recién acá es seguro insertar el <div> del lienzo.
+        this.appendChild(this.container);
 
         var toolboxDefinition = this.buildToolbox();
 
