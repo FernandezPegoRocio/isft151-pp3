@@ -1,40 +1,44 @@
-//  info relevante:
-//   - WorkspaceModel  extends EventTarget   -> guarda el codigo generado
-//   - WorkspaceView   extends HTMLElement   -> el lienzo de Blockly (es con canvas)
-//   - WorkspaceController                   -> conecta Model y View, no se conocen entre si.
+
+//   - WorkspaceView  extends HTMLElement -> el lienzo de Blockly (con canvas),
+//                                           y ahora también dueña del HTML generado
+
+//   - WorkspaceController                -> escucha los cambios de la Vista y
+//                                           los anuncia hacia afuera (webcraft:workspace-updated)
+
+// El HTML generado es una salida visual, no un dato de dominio, así que
+// vive adentro de WorkspaceView y no en un Modelo aparte. 
+// Por eso ya no hay una clase Modelo en este archivo. 
 
 // Este archivo usa el CONTRATO definido en toolbox.js (usa las funciones de toolbox)
 import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './toolbox.js';
 
 // Se genera el codigo de html
 // Hay un Blockly.Generator para todo el proyecto.
+
 // Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo']
-// Y se hace a traves de registerAllGenerators(). Este archivo no sabe (ni le importa)
+// Y se hace a traves de registerAllGenerators(). Este archivo no sabe 
 // que bloques existen: solo arma el generador y lo deja listo para usarse.
 
-function createHtmlGenerator()
+
+// esta funcion arma el HTML que representa el estado del lienzo (el "workspace"),
+// no es el HTML que se va a mostrar en el futuro panel de Code Preview. 
+function createWorkspaceViewGenerator()
 {
     var generator = new Blockly.Generator('WebCraftHTML');
 
     generator.INDENT = '  ';
 
-    // Se ejecuta una vez al empezar a generar codigo para todo el workspace
-
+    
     generator.init = function (workspace)
     {
         // Por ahora no hace falta guardar estado entre bloques(anidados)
-
     };
-
-    // Se ejecuta una sola vez al terminar de recorrer todos los bloques
 
     generator.finish = function (code)
     {
         return code;
     };
 
-    // Encadena el codigo de un bloque con el del bloque conectado debajo
-    // (bloque.getNextBlock()),  es como Blockly arma sentencias en serie.
 
     generator.scrub_ = function (block, code, opt_thisOnly)
     {
@@ -49,9 +53,7 @@ function createHtmlGenerator()
 }
 
 // workspace, generator
-// Recorre los bloques comienza desde arriba del workspace
-// y les pide al generador el codigo HTMLn de lo que se hace
-// se agrega, mueve, conecta o borra un bloque
+// Recorre los bloques 
 
 function workspaceToData(workspace, generator)
 {
@@ -64,29 +66,11 @@ function workspaceToData(workspace, generator)
 
     return { html: code };
 }
-// modelo
-
-class WorkspaceModel extends EventTarget
-{
-    constructor()
-    {
-        super();
-        this.data = { html: '' };
-    }
-
-    actualizar(data)
-    {
-        this.data = data;
-        this.dispatchEvent(new CustomEvent('changed'));
-    }
-
-    getData()
-    {
-        return this.data;
-    }
-}
 
 // Vista
+// Es el componente visual, el lienzo de Blockly en sí, 
+// y ahora también la dueña del HTML generado 
+// ya no hace falta un Modelo
 
 class WorkspaceView extends HTMLElement
 {
@@ -94,20 +78,21 @@ class WorkspaceView extends HTMLElement
     {
         super();
 
-        // Ojo: el constructor de un Web Component NO puede tocar sus
-        // propios hijos (lo prohíbe la spec de Custom Elements). Por eso
-        // acá solo se crea el <div>, sin insertarlo todavía.
+        // El constructor de un Web Component no puede tocar sus propios hijos
+        // Por eso acá solo se crea el <div>
+
         this.container = document.createElement('div');
         this.container.className = 'blockly-workspace-container';
 
         this.workspace = null;
         this.generator = null;
+        this.html = '';
     }
 
     buildToolbox()
     {
         registerAllBlocks();
-        this.generator = createHtmlGenerator();
+        this.generator = createWorkspaceViewGenerator();
         return getToolboxDefinition();
     }
 
@@ -119,6 +104,11 @@ class WorkspaceView extends HTMLElement
     getGenerator()
     {
         return this.generator;
+    }
+
+    getHtml()
+    {
+        return this.html;
     }
 
     connectedCallback()
@@ -141,6 +131,9 @@ class WorkspaceView extends HTMLElement
                 return;
             }
 
+            // La Vista arma su propio HTML apenas detecta un cambio 
+            self.html = workspaceToData(self.workspace, self.generator).html;
+
             self.dispatchEvent(new CustomEvent('request', {
                 detail: { action: 'workspace-changed' }
             }));
@@ -160,60 +153,46 @@ class WorkspaceView extends HTMLElement
 customElements.define('blockly-workspace-view', WorkspaceView);
 
 // Controlador
+// Escucha los avisos de la Vista y los reenvia como un evento 
+// a nivel document, para otras partes del sistema
 
 class WorkspaceController
 {
-    constructor(model, view)
+    constructor(view)
     {
-        this.model = model;
         this.view = view;
 
         this.onViewRequest = this.onViewRequest.bind(this);
-        this.onModelChanged = this.onModelChanged.bind(this);
     }
 
     init()
     {
         this.view.addEventListener('request', this.onViewRequest);
-        this.model.addEventListener('changed', this.onModelChanged);
     }
 
     release()
     {
         this.view.removeEventListener('request', this.onViewRequest);
-        this.model.removeEventListener('changed', this.onModelChanged);
     }
 
     onViewRequest(event)
     {
         if (event.detail.action === 'workspace-changed')
         {
-            var data = workspaceToData(this.view.getWorkspace(), this.view.getGenerator());
-            this.model.actualizar(data);
+            var html = this.view.getHtml();
+
+            document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
+                detail: { html: html }
+            }));
         }
-    }
-
-    onModelChanged()
-    {
-        var data = this.model.getData();
-
-        // En esta parte va lo de Syls
-        // El componente de Preview
-
-        document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
-            detail: data
-        }));
     }
 }
 
-
 // inicio
-
-var workspaceModel = new WorkspaceModel();
 var workspaceView = document.createElement('blockly-workspace-view');
 document.body.appendChild(workspaceView);
 
-var workspaceController = new WorkspaceController(workspaceModel, workspaceView);
+var workspaceController = new WorkspaceController(workspaceView);
 workspaceController.init();
 
-export { WorkspaceModel, WorkspaceView, WorkspaceController, workspaceToData };
+export { WorkspaceView, WorkspaceController, workspaceToData };
