@@ -1,4 +1,3 @@
-
 //   - WorkspaceView  extends HTMLElement -> el lienzo de Blockly (con canvas),
 //                                           y ahora también dueña del HTML generado
 
@@ -6,29 +5,29 @@
 //                                           los anuncia hacia afuera (webcraft:workspace-updated)
 
 // El HTML generado es una salida visual, no un dato de dominio, así que
-// vive adentro de WorkspaceView y no en un Modelo aparte. 
-// Por eso ya no hay una clase Modelo en este archivo. 
+// vive adentro de WorkspaceView y no en un Modelo aparte.
+// Por eso ya no hay una clase Modelo en este archivo.
 
 // Este archivo usa el CONTRATO definido en toolbox.js (usa las funciones de toolbox)
-import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './toolbox.js';
+import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './Toolbox.js';
 
 // Se genera el codigo de html
 // Hay un Blockly.Generator para todo el proyecto.
 
 // Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo']
-// Y se hace a traves de registerAllGenerators(). Este archivo no sabe 
+// Y se hace a traves de registerAllGenerators(). Este archivo no sabe
 // que bloques existen: solo arma el generador y lo deja listo para usarse.
 
 
 // esta funcion arma el HTML que representa el estado del lienzo (el "workspace"),
-// no es el HTML que se va a mostrar en el futuro panel de Code Preview. 
+// no es el HTML que se va a mostrar en el futuro panel de Code Preview.
 function createWorkspaceViewGenerator()
 {
     var generator = new Blockly.Generator('WebCraftHTML');
 
     generator.INDENT = '  ';
 
-    
+
     generator.init = function (workspace)
     {
         // Por ahora no hace falta guardar estado entre bloques(anidados)
@@ -47,13 +46,22 @@ function createWorkspaceViewGenerator()
         return code + nextCode;
     };
 
+    // Garantiza que un valor quede siempre bien formado entre comillas,
+    // para que ninguna categoría rompa una etiqueta por una comilla faltante
+    generator.quoteAttr = function (value)
+    {
+        var texto = (value === undefined || value === null) ? '' : String(value);
+        texto = texto.replace(/"/g, '&quot;');
+        return '"' + texto + '"';
+    };
+
     registerAllGenerators(generator);
 
     return generator;
 }
 
 // workspace, generator
-// Recorre los bloques 
+// Recorre los bloques
 
 function workspaceToData(workspace, generator)
 {
@@ -68,8 +76,8 @@ function workspaceToData(workspace, generator)
 }
 
 // Vista
-// Es el componente visual, el lienzo de Blockly en sí, 
-// y ahora también la dueña del HTML generado 
+// Es el componente visual, el lienzo de Blockly en sí,
+// y ahora también la dueña del HTML generado
 // ya no hace falta un Modelo
 
 class WorkspaceView extends HTMLElement
@@ -131,7 +139,7 @@ class WorkspaceView extends HTMLElement
                 return;
             }
 
-            // La Vista arma su propio HTML apenas detecta un cambio 
+            // La Vista arma su propio HTML apenas detecta un cambio
             self.html = workspaceToData(self.workspace, self.generator).html;
 
             self.dispatchEvent(new CustomEvent('request', {
@@ -153,7 +161,7 @@ class WorkspaceView extends HTMLElement
 customElements.define('blockly-workspace-view', WorkspaceView);
 
 // Controlador
-// Escucha los avisos de la Vista y los reenvia como un evento 
+// Escucha los avisos de la Vista y los reenvia como un evento
 // a nivel document, para otras partes del sistema
 
 class WorkspaceController
