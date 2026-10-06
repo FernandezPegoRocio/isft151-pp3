@@ -46,7 +46,8 @@ function registerBlocks()
             init: function() {
                 this.appendDummyInput().appendField('Enlace <a>');
                 this.appendValueInput('HREF').setCheck('String').appendField('URL (href)');
-                this.appendStatementInput('TEXTO').setCheck(null).appendField('texto del enlace');
+                this.appendValueInput('TEXTO').setCheck('String').appendField('texto del enlace');
+                //this.appendStatementInput('TEXTO').setCheck(null).appendField('texto del enlace');
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
                 this.setColour(120);
@@ -66,7 +67,8 @@ function getCategory()
             { kind: 'block', type: 'html_p' },
             { kind: 'block', type: 'html_span' },
             { kind: 'block', type: 'html_img' },
-            { kind: 'block', type: 'html_a' }
+            { kind: 'block', type: 'html_a' },
+            { kind: 'block', type: 'text' }
         ]
     };
 }
@@ -86,14 +88,21 @@ function registerGenerators(generator)
     generator.forBlock['html_img'] = function(block) {
         var src = generator.valueToCode(block, 'SRC', generator.ORDER_ATOMIC) || '""';
         var alt = generator.valueToCode(block, 'ALT', generator.ORDER_ATOMIC) || '""';
-        return '<img src=' + src + ' alt=' + alt + '>\n';
+       // return '<img src=' + src + ' alt=' + alt + '>\n';
+        return '<img src=' + generator.quoteAttr(src) + ' alt=' + generator.quoteAttr(alt) + '>\n';
     };
 
     generator.forBlock['html_a'] = function(block) {
         var href = generator.valueToCode(block, 'HREF', generator.ORDER_ATOMIC) || '""';
-        var text = generator.statementToCode(block, 'TEXTO') || '';
-        return '<a href=' + href + '>' + text + '</a>\n';
+        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '""';
+        //return '<a href=' + href + '>' + text + '</a>\n';
+        return '<a href=' + generator.quoteAttr(href) + '>' + text + '</a>\n';
     };
+
+    generator.forBlock['text'] = function(block) {
+    return [block.getFieldValue('TEXT'), generator.ORDER_ATOMIC];
+    };
+
 }
 
 export { registerBlocks, getCategory, registerGenerators };
