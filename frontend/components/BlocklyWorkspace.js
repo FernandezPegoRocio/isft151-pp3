@@ -132,6 +132,12 @@ class WorkspaceView extends HTMLElement
             toolbox: toolboxDefinition
         });
 
+        // Le avisamos a Blockly que vuelva a medir su tamaño una vez que ya
+        // está insertado en el layout real (adentro del flex de
+        // WebCraftApplication). Si no, calcula mal el flyout y la papelera
+        // porque mide el contenedor antes de que termine de acomodarse.
+        Blockly.svgResize(this.workspace);
+
         this.workspace.addChangeListener(function (event)
         {
             if (event.isUiEvent)
@@ -196,11 +202,9 @@ class WorkspaceController
     }
 }
 
-// inicio
-var workspaceView = document.createElement('blockly-workspace-view');
-document.body.appendChild(workspaceView);
-
-var workspaceController = new WorkspaceController(workspaceView);
-workspaceController.init();
+// Este archivo ya no crea ni inserta el <blockly-workspace-view> él solo:
+// ahora es WebCraftApplication.js quien decide dónde va dentro del layout
+// general, y quien arma el WorkspaceController para conectarlo.
+// Acá solo queda definido el Web Component y disponible para usarse.
 
 export { WorkspaceView, WorkspaceController, workspaceToData };
