@@ -1,32 +1,21 @@
-//   - WorkspaceView  extends HTMLElement -> el lienzo de Blockly (con canvas),
-//                                           y ahora también dueña del HTML generado
+// BlocklyWorkspace.js — el lienzo de Blockly, en MVC:
+//
+//   - WorkspaceModel      extends EventTarget -> guarda el HTML generado y avisa con 'changed'
+//   - WorkspaceView       extends HTMLElement -> el lienzo de Blockly; despacha 'request'
+//   - WorkspaceController                     -> resuelve el pedido de la Vista, actualiza el
+//                                                Modelo y anuncia hacia afuera
+//                                                (webcraft:workspace-updated)
 
-//   - WorkspaceController                -> escucha los cambios de la Vista y
-//                                           los anuncia hacia afuera (webcraft:workspace-updated)
-
-// El HTML generado es una salida visual, no un dato de dominio, así que
-// vive adentro de WorkspaceView y no en un Modelo aparte.
-// Por eso ya no hay una clase Modelo en este archivo.
-
-// Este archivo usa el CONTRATO definido en toolbox.js (usa las funciones de toolbox)
 import { registerAllBlocks, registerAllGenerators, getToolboxDefinition } from './Toolbox.js';
 
-// Se genera el codigo de html
-// Hay un Blockly.Generator para todo el proyecto.
-
-// Cada modulo de blocks/ suma sus propias funciones generator.forBlock['tipo']
-// Y se hace a traves de registerAllGenerators(). Este archivo no sabe
-// que bloques existen: solo arma el generador y lo deja listo para usarse.
-
-
-// esta funcion arma el HTML que representa el estado del lienzo (el "workspace"),
-// no es el HTML que se va a mostrar en el futuro panel de Code Preview.
 function createWorkspaceViewGenerator()
 {
-    var generator = new Blockly.Generator('WebCraftHTML');
+    let generator = new Blockly.Generator('WebCraftHTML');
 
     generator.INDENT = '  ';
-
+    
+    generator.ORDER_ATOMIC = 0;
+    generator.ORDER_NONE = 99;
 
     generator.init = function (workspace)
     {
@@ -41,26 +30,37 @@ function createWorkspaceViewGenerator()
 
     generator.scrub_ = function (block, code, opt_thisOnly)
     {
-        var nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-        var nextCode = (opt_thisOnly || !nextBlock) ? '' : generator.blockToCode(nextBlock);
+        let nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+        let nextCode = (opt_thisOnly || !nextBlock) ? '' : generator.blockToCode(nextBlock);
         return code + nextCode;
     };
 
-    // Garantiza que un valor quede siempre bien formado entre comillas,
-    // para que ninguna categoría rompa una etiqueta por una comilla faltante
+    // Garantiza que un valor quede siempre bien formado entre comillas
     generator.quoteAttr = function (value)
     {
-        var texto = (value === undefined || value === null) ? '' : String(value);
+        let texto = (value === undefined || value === null) ? '' : String(value);
         texto = texto.replace(/"/g, '&quot;');
         return '"' + texto + '"';
     };
 
     registerAllGenerators(generator);
 
+    // El bloque de texto ("...") es un bloque estándar de Blockly y ninguna
+    // categoría le define generador. Si nadie lo definió, se agrega acá para
+    // que los bloques con entrada de texto (<p>, <span>, <img>, etc.) puedan
+    // recibirlo. Devuelve el texto entre comillas, como esperan los demás.
+    if (typeof generator.forBlock['text'] !== 'function')
+    {
+        generator.forBlock['text'] = function (block)
+        {
+            let valor = block.getFieldValue('TEXT');
+            return [generator.quoteAttr(valor), generator.ORDER_ATOMIC];
+        };
+    }
+
     return generator;
 }
 
-// workspace, generator
 // Recorre los bloques
 
 function workspaceToData(workspace, generator)
@@ -70,31 +70,60 @@ function workspaceToData(workspace, generator)
         return { html: '' };
     }
 
-    var code = generator.workspaceToCode(workspace);
+    let code = generator.workspaceToCode(workspace);
 
     return { html: code };
 }
 
-// Vista
-// Es el componente visual, el lienzo de Blockly en sí,
-// y ahora también la dueña del HTML generado
-// ya no hace falta un Modelo
+// MODELO
+// Guarda el HTML generado a partir de los bloques y avisa cuando cambia.
+// No sabe nada de Blockly ni de la pantalla.
+class WorkspaceModel extends EventTarget
+{
+    constructor()
+    {
+        super();
+        this._html = '';
+    }
 
+    getHtml()
+    {
+        return this._html;
+    }
+
+    setHtml(html)
+    {
+        this._html = html || '';
+        this.changed();
+    }
+
+    changed()
+    {
+        this.dispatchEvent(new CustomEvent('changed', {
+            detail: { html: this._html }
+        }));
+    }
+}
+
+
+// VISTA (HTMLElement)
+// Es el componente visual: el lienzo de Blockly.
+// No decide qué hacer con los cambios: despacha un 'request'.
 class WorkspaceView extends HTMLElement
 {
     constructor()
     {
         super();
 
-        // El constructor de un Web Component no puede tocar sus propios hijos
-        // Por eso acá solo se crea el <div>
-
         this.container = document.createElement('div');
         this.container.className = 'blockly-workspace-container';
+        this.appendChild(this.container);
 
         this.workspace = null;
         this.generator = null;
-        this.html = '';
+
+        // bind(this) para que "this" siga siendo la Vista
+        this._onBlocklyChange = this._onBlocklyChange.bind(this);
     }
 
     buildToolbox()
@@ -114,97 +143,101 @@ class WorkspaceView extends HTMLElement
         return this.generator;
     }
 
+    // Genera el HTML a partir de los bloques que hay en el lienzo
     getHtml()
     {
-        return this.html;
+        return workspaceToData(this.workspace, this.generator).html;
     }
 
+    // EXCEPCIÓN Blockly.inject necesita que el elemento ya esté
+    // conectado al documento para poder medir el lienzo.
     connectedCallback()
     {
-        var self = this;
-
-        // Recién acá es seguro insertar el <div> del lienzo.
-        this.appendChild(this.container);
-
-        var toolboxDefinition = this.buildToolbox();
+        let  toolboxDefinition = this.buildToolbox();
 
         this.workspace = Blockly.inject(this.container, {
             toolbox: toolboxDefinition
         });
 
-        // Le avisamos a Blockly que vuelva a medir su tamaño una vez que ya
-        // está insertado en el layout real (adentro del flex de
-        // WebCraftApplication). Si no, calcula mal el flyout y la papelera
-        // porque mide el contenedor antes de que termine de acomodarse.
+        // Blockly vuelve a medir su tamaño ya dentro del layout real.
         Blockly.svgResize(this.workspace);
 
-        this.workspace.addChangeListener(function (event)
-        {
-            if (event.isUiEvent)
-            {
-                return;
-            }
-
-            // La Vista arma su propio HTML apenas detecta un cambio
-            self.html = workspaceToData(self.workspace, self.generator).html;
-
-            self.dispatchEvent(new CustomEvent('request', {
-                detail: { action: 'workspace-changed' }
-            }));
-        });
+        this.workspace.addChangeListener(this._onBlocklyChange);
     }
 
     disconnectedCallback()
     {
         if (this.workspace)
         {
+            this.workspace.removeChangeListener(this._onBlocklyChange);
             this.workspace.dispose();
             this.workspace = null;
         }
+    }
+
+    // Traduce un cambio de Blockly en un pedido
+    _onBlocklyChange(event)
+    {
+        if (event.isUiEvent)
+        {
+            return;
+        }
+
+        this.dispatchEvent(new CustomEvent('request', {
+            detail: { action: 'workspace-changed' }
+        }));
     }
 }
 
 customElements.define('blockly-workspace-view', WorkspaceView);
 
-// Controlador
-// Escucha los avisos de la Vista y los reenvia como un evento
-// a nivel document, para otras partes del sistema
 
+// CONTROLADOR (clase común)
+// Ante el pedido de la Vista, le pide el HTML, actualiza el Modelo y,
+// cuando el Modelo cambia, lo anuncia a nivel document para el resto.
 class WorkspaceController
 {
-    constructor(view)
+    constructor(view, model)
     {
-        this.view = view;
+        this._view = view;
+        this._model = model;
 
-        this.onViewRequest = this.onViewRequest.bind(this);
+        this._onViewRequest = this.onViewRequest.bind(this);
+        this._onModelChanged = this.onModelChanged.bind(this);
     }
 
-    init()
+    enable()
     {
-        this.view.addEventListener('request', this.onViewRequest);
+        this._view.addEventListener('request', this._onViewRequest);
+        this._model.addEventListener('changed', this._onModelChanged);
     }
 
-    release()
+    disable()
     {
-        this.view.removeEventListener('request', this.onViewRequest);
+        this._view.removeEventListener('request', this._onViewRequest);
+        this._model.removeEventListener('changed', this._onModelChanged);
     }
 
+    // Pedido de la Vista: según la acción, acá se resuelve qué hacer
     onViewRequest(event)
     {
         if (event.detail.action === 'workspace-changed')
         {
-            var html = this.view.getHtml();
-
-            document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
-                detail: { html: html }
-            }));
+            this._model.setHtml(this._view.getHtml());
         }
+    }
+
+    // El Modelo cambió: aviso al resto de la aplicación
+    onModelChanged(event)
+    {
+        document.dispatchEvent(new CustomEvent('webcraft:workspace-updated', {
+            detail: { html: event.detail.html }
+        }));
     }
 }
 
-// Este archivo ya no crea ni inserta el <blockly-workspace-view> él solo:
-// ahora es WebCraftApplication.js quien decide dónde va dentro del layout
-// general, y quien arma el WorkspaceController para conectarlo.
-// Acá solo queda definido el Web Component y disponible para usarse.
+// Este archivo ya no inserta el <blockly-workspace-view> él solo:
+// WebCraftApplication.js decide dónde va dentro del layout general y
+// arma el WorkspaceModel y el WorkspaceController.
 
-export { WorkspaceView, WorkspaceController, workspaceToData };
+export { WorkspaceModel, WorkspaceView, WorkspaceController, workspaceToData };

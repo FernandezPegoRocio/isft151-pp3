@@ -2,8 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
     <title>WebCraft — Entorno Blockly</title>
     <style>
+        webcraft-application {
+            display: block;
+        }
+
         .blockly-workspace-container {
             width: 100%;
             height: 600px;
@@ -12,19 +17,13 @@
         .webcraft-workspace-area {
             display: flex;
             gap: 8px;
+            height: 600px;
         }
-
-        /* El lienzo de Blockly necesita más ancho que el panel de al lado:
-           con el mismo flex:1 para los dos queda angosto y el menú
-           desplegable de bloques y la papelera se renderizan mal. */
         .webcraft-workspace-area > blockly-workspace-view {
             flex: 2;
             min-width: 500px;
         }
 
-        /* Preview y Code Preview comparten este panel y se turnan con el
-           botón "Previsualizar HTML" — por eso van apilados, uno arriba del
-           otro, y JS decide con display cuál se ve. */
         .webcraft-preview-area {
             flex: 1;
             min-width: 250px;

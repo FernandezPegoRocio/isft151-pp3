@@ -1,72 +1,179 @@
-// Header.js (Cabecera): Contiene las acciones globales de control.
-// Botones: 
-// * request-preview: Mostrará el componente/area CodePreview cuando se haga click
-// * request-save: guardará el proyecto en el local storage
-// * request-download-html: Cuando se hace clic en "Descargar HTML".
-// * request-export-png: Cuando se hace clic en "Exportar a PNG".
-	
+// Header.js (Cabecera): contiene las acciones globales de control, en MVC.
+//
+//   - HeaderModel      extends EventTarget -> guarda el último HTML generado y sabe guardarlo
+//   - HeaderView       extends HTMLElement -> el título y los botones; despacha 'request'
+//   - HeaderController                     -> resuelve cada botón
+//
+// Botones y eventos que sube la cabecera hacia la aplicación (bubbles):
+// * request-preview       : "Previsualizar HTML"
+// * request-save          : "Guardar" (guarda el proyecto en el localStorage)
+// * request-download-html : "Descargar HTML"
+// * request-export-png    : "Exportar a PNG"
 
-class WebCraftHeader extends HTMLElement {
-    constructor() {
+
+// MODELO
+// Guarda el HTML actual y se ocupa de la persistencia (RF11).
+class HeaderModel extends EventTarget
+{
+    constructor()
+    {
         super();
-        this.html = '';
-        this.onWorkspaceUpdated = this.onWorkspaceUpdated.bind(this);
-        this.onAction = this.onAction.bind(this);
+        this._html = '';
     }
 
-    connectedCallback() {
-        this.render();
-        document.addEventListener('webcraft:workspace-updated', this.onWorkspaceUpdated);
+    getHtml()
+    {
+        return this._html;
     }
 
-    disconnectedCallback() {
-        document.removeEventListener('webcraft:workspace-updated', this.onWorkspaceUpdated);
+    setHtml(html)
+    {
+        this._html = html || '';
+        this.changed();
     }
 
-    render() {
-        this.innerHTML = `
-            <header>
-                <h1>WebCraft - Entorno Blockly</h1>
-                <div class="acciones">
-                    <button type="button" data-action="preview">Previsualizar HTML</button>
-                    <button type="button" data-action="save">Guardar</button>
-                    <button type="button" data-action="download-html">Descargar HTML</button>
-                    <button type="button" data-action="export-png">Exportar a PNG</button>
-                </div>
-            </header>
-        `;
-
-        this.querySelector('.acciones').addEventListener('click', this.onAction);
+    // Guarda el proyecto en el localStorage
+    save()
+    {
+        localStorage.setItem('webcraft:html', this._html);
+        this.changed();
     }
 
-    onWorkspaceUpdated(event) {
-        this.html = event.detail?.html || '';
-    }
-
-    onAction(event) {
-        const button = event.target.closest('[data-action]');
-        if (!button) return;
-
-        const actions = {
-            preview: 'request-preview',
-            save: 'request-save',
-            'download-html': 'request-download-html',
-            'export-png': 'request-export-png'
-        };
-        const action = actions[button.dataset.action];
-
-        if (button.dataset.action === 'save') {
-            localStorage.setItem('webcraft:html', this.html);
-        }
-
-        this.dispatchEvent(new CustomEvent(action, {
-            bubbles: true,
-            detail: { html: this.html }
+    changed()
+    {
+        this.dispatchEvent(new CustomEvent('changed', {
+            detail: { html: this._html }
         }));
     }
 }
 
-customElements.define('webcraft-header', WebCraftHeader);
 
-export { WebCraftHeader };
+// Crea un botón de la cabecera 
+function createHeaderButton(action, text)
+{
+    let button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.action = action;
+    button.appendChild(document.createTextNode(text));
+    return button;
+}
 
+
+// VISTA (HTMLElement)
+// Arma el DOM en el constructor con nodos nativos (sin innerHTML).
+// No decide qué hacer con cada botón: despacha un 'request'.
+class HeaderView extends HTMLElement
+{
+    constructor()
+    {
+        super();
+
+        let header = document.createElement('header');
+
+        let title = document.createElement('h1');
+        title.appendChild(document.createTextNode('WebCraft - Entorno Blockly'));
+
+        this.actions = document.createElement('div');
+        this.actions.className = 'acciones';
+        this.actions.appendChild(createHeaderButton('preview', 'Previsualizar HTML'));
+        this.actions.appendChild(createHeaderButton('save', 'Guardar'));
+        this.actions.appendChild(createHeaderButton('download-html', 'Descargar HTML'));
+        this.actions.appendChild(createHeaderButton('export-png', 'Exportar a PNG'));
+
+        header.appendChild(title);
+        header.appendChild(this.actions);
+        this.appendChild(header);
+
+        // bind(this) para que "this" siga siendo la Vista
+        this._onActionsClick = this._onActionsClick.bind(this);
+        this.actions.addEventListener('click', this._onActionsClick);
+    }
+
+    connectedCallback()
+    {
+
+    }
+
+    disconnectedCallback()
+    {
+
+    }
+
+    // Traduce el clic de un botón en un pedido
+    _onActionsClick(event)
+    {
+        let button = event.target.closest('[data-action]');
+        if (!button)
+        {
+            return;
+        }
+
+        this.dispatchEvent(new CustomEvent('request', {
+            detail: { action: button.dataset.action }
+        }));
+    }
+
+    // Sube un aviso a la aplicación (bubbles: sube por el DOM)
+    announce(eventName, html)
+    {
+        this.dispatchEvent(new CustomEvent(eventName, {
+            bubbles: true,
+            detail: { html: html }
+        }));
+    }
+}
+
+customElements.define('webcraft-header', HeaderView);
+
+
+// CONTROLADOR (clase común)
+// Resuelve qué hace cada botón y escucha el HTML que genera el workspace.
+class HeaderController
+{
+    constructor(view, model)
+    {
+        this._view = view;
+        this._model = model;
+
+        this._onViewRequest = this.onViewRequest.bind(this);
+        this._onWorkspaceUpdated = this.onWorkspaceUpdated.bind(this);
+    }
+
+    enable()
+    {
+        this._view.addEventListener('request', this._onViewRequest);
+        document.addEventListener('webcraft:workspace-updated', this._onWorkspaceUpdated);
+    }
+
+    disable()
+    {
+        this._view.removeEventListener('request', this._onViewRequest);
+        document.removeEventListener('webcraft:workspace-updated', this._onWorkspaceUpdated);
+    }
+
+    // Pedido de la Vista: según la acción, acá se resuelve qué hacer
+    onViewRequest(event)
+    {
+        let action = event.detail.action;
+
+        if (action === 'save')
+        {
+            this._model.save();
+        }
+
+        this._view.announce('request-' + action, this._model.getHtml());
+    }
+
+    // El workspace avisó que cambió el HTML generado
+    onWorkspaceUpdated(event)
+    {
+        let html = (event.detail && event.detail.html) ? event.detail.html : '';
+        this._model.setHtml(html);
+    }
+}
+
+export {
+    HeaderModel,
+    HeaderView,
+    HeaderController
+};
