@@ -13,6 +13,87 @@ import { LivePreviewView, LivePreviewModel, LivePreviewController } from './Live
 import { CodePreviewView, CodePreviewModel, CodePreviewController } from './CodePreview.js';
 
 
+
+
+// Baja un Blob como archivo: crea un <a> temporal, lo "clickea" y lo descarta.
+function downloadBlob(blob, fileName)
+{
+    let url = URL.createObjectURL(blob);
+    let link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+
+// Descargar HTML: guarda el HTML generado por los bloques en un .html
+function downloadHtml(html)
+{
+    if (!html)
+    {
+        window.alert('Todavía no hay bloques para descargar.');
+        return;
+    }
+
+    downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), 'webcraft.html');
+}
+
+
+// Exportar a PNG: html2canvas "saca una foto" del cuerpo de la Live Preview
+// y la baja como imagen. Devuelve la promesa para poder avisar cuándo termina.
+function exportPng(bodyElement)
+{
+    if (typeof html2canvas !== 'function' || !bodyElement)
+    {
+        window.alert('No se pudo exportar: falta la librería html2canvas o la vista previa.');
+        return Promise.resolve();
+    }
+
+    return html2canvas(bodyElement, { backgroundColor: '#ffffff' }).then(function (canvas)
+    {
+        canvas.toBlob(function (blob)
+        {
+            downloadBlob(blob, 'webcraft.png');
+        }, 'image/png');
+    });
+}
+
+
+// Abrir proyecto: muestra el selector de archivos y le pasa el texto del
+// archivo elegido a la función que recibe.
+function pickTextFile(onText)
+{
+    let input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+
+    input.addEventListener('change', function ()
+    {
+        let file = input.files[0];
+
+        if (!file)
+        {
+            return;
+        }
+
+        let reader = new FileReader();
+
+        reader.addEventListener('load', function ()
+        {
+            onText(reader.result);
+        });
+
+        reader.readAsText(file);
+    });
+
+    input.click();
+}
+
+
 class WebCraftApplicationModel extends EventTarget
 {
 
@@ -65,14 +146,14 @@ class WebCraftApplicationView extends HTMLElement
         this.codePreview = new CodePreviewView();
 
         // Fila que va debajo del header: workspace a la izquierda y
-        // panel de previews a la derecha. El className es el "gancho" para
+        // panel de previews a la derecha. La clase CSS es el "gancho" para
         // que el CSS del index.html la acomode con flex.
         this.workspaceArea = document.createElement('div');
-        this.workspaceArea.className = 'webcraft-workspace-area';
+        this.workspaceArea.classList.add('webcraft-workspace-area');
 
         // Live Preview y Code Preview comparten este panel
         this.previewArea = document.createElement('div');
-        this.previewArea.className = 'webcraft-preview-area';
+        this.previewArea.classList.add('webcraft-preview-area');
 
         this.previewArea.appendChild(this.preview);
         this.previewArea.appendChild(this.codePreview);
@@ -89,8 +170,13 @@ class WebCraftApplicationView extends HTMLElement
         // el evento sube por el DOM porque
         // el Header lo despacha con bubbles: true
         // bind(this) para que "this" siga siendo la Vista
-        this._onHeaderPreviewClick = this._onHeaderPreviewClick.bind(this);
-        this.addEventListener('request-preview', this._onHeaderPreviewClick);
+        this._onHeaderRequest = this._onHeaderRequest.bind(this);
+        this.addEventListener('request-preview', this._onHeaderRequest);
+        this.addEventListener('request-download-html', this._onHeaderRequest);
+        this.addEventListener('request-export-png', this._onHeaderRequest);
+        this.addEventListener('request-save', this._onHeaderRequest);
+        this.addEventListener('request-save-project', this._onHeaderRequest);
+        this.addEventListener('request-open-project', this._onHeaderRequest);
     }
 
     connectedCallback()
@@ -107,12 +193,28 @@ class WebCraftApplicationView extends HTMLElement
     // de la acción. Quién lo resuelve es problema del Controlador.
 
 
-    _onHeaderPreviewClick()
+    _onHeaderRequest(event)
     {
-        // Acá la Vista traduce un clic en un evento específico
+        // Acá la Vista traduce el aviso del Header en una acción de 'request'
+        let actions = {
+            'request-preview': 'toggle-preview',
+            'request-download-html': 'download-html',
+            'request-export-png': 'export-png',
+            'request-save': 'save',
+            'request-save-project': 'save-project',
+            'request-open-project': 'open-project'
+        };
+
         this.dispatchEvent(new CustomEvent('request', {
-            detail: { action: 'toggle-preview' }
+            detail: { action: actions[event.type], html: event.detail.html }
         }));
+    }
+
+
+    // Muestra un mensaje al estudiante
+    showMessage(text)
+    {
+        window.alert(text);
     }
 
 
@@ -234,12 +336,86 @@ class WebCraftApplicationController
     // Pedido de la Vista: según la acción, acá se resuelve qué hacer
     onViewRequest(event)
     {
-        // Acá el Controlador resuelve realmente qué hacer. Si la
-        // acción es 'toggle-preview', le pide al Modelo que cambie.
-        if (event.detail.action === 'toggle-preview')
+        // Acá el Controlador resuelve realmente qué hacer según la acción.
+        let action = event.detail.action;
+
+        if (action === 'toggle-preview')
         {
             this._model.toggleCodeView();
         }
+        else if (action === 'download-html')
+        {
+            downloadHtml(event.detail.html);
+        }
+        else if (action === 'export-png')
+        {
+            this.exportPreviewAsPng();
+        }
+        else if (action === 'save')
+        {
+            this.saveInBrowser();
+        }
+        else if (action === 'save-project')
+        {
+            this.downloadProject();
+        }
+        else if (action === 'open-project')
+        {
+            this.openProject();
+        }
+    }
+
+    // Guardar: deja el trabajo guardado en el navegador (además del guardado automático)
+    saveInBrowser()
+    {
+        if (this._workspaceController.saveNow())
+        {
+            this._view.showMessage('Proyecto guardado en este navegador.');
+        }
+        else
+        {
+            this._view.showMessage('No se pudo guardar en el navegador. Descargá el proyecto como archivo.');
+        }
+    }
+
+    // Descargar proyecto: baja el lienzo como archivo .json
+    downloadProject()
+    {
+        let json = this._workspaceController.getProjectJson();
+
+        downloadBlob(new Blob([json], { type: 'application/json' }), 'webcraft-proyecto.json');
+    }
+
+    // Abrir proyecto: elige un archivo .json y lo carga en el lienzo
+    openProject()
+    {
+        let workspaceController = this._workspaceController;
+
+        pickTextFile(function (text)
+        {
+            workspaceController.loadProjectJson(text);
+        });
+    }
+
+    // La Live Preview tiene que estar visible para poder "fotografiarla":
+    // si se está mostrando el código, la muestra un momento y después la vuelve a esconder.
+    exportPreviewAsPng()
+    {
+        let view = this._view;
+        let wasShowingCode = this._model.isShowingCode();
+
+        if (wasShowingCode)
+        {
+            view.showPreview(false);
+        }
+
+        exportPng(view.getPreview().getBody()).then(function ()
+        {
+            if (wasShowingCode)
+            {
+                view.showPreview(true);
+            }
+        });
     }
 
     // El Modelo cambió: le digo a la Vista que se actualice

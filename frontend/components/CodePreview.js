@@ -209,21 +209,21 @@ class CodePreviewView extends HTMLElement
         `;
 
         let header = document.createElement('div');
-        header.className = 'panel-header';
+        header.classList.add('panel-header');
         let titleSpan = document.createElement('span');
         titleSpan.textContent = 'Previsualización de código';
         let statusSpan = document.createElement('span');
-        statusSpan.className = 'status';
+        statusSpan.classList.add('status');
         statusSpan.textContent = '● En vivo';
         header.append(titleSpan, statusSpan);
 
         let tabsContainer = document.createElement('div');
-        tabsContainer.className = 'tabs';
+        tabsContainer.classList.add('tabs');
         tabsContainer.setAttribute('role', 'tablist');
         tabsContainer.setAttribute('aria-label', 'Tipo de código');
 
         this._htmlTab = document.createElement('button');
-        this._htmlTab.className = 'tab';
+        this._htmlTab.classList.add('tab');
         this._htmlTab.type = 'button';
         this._htmlTab.setAttribute('role', 'tab');
         this._htmlTab.id = 'html-tab';
@@ -233,7 +233,7 @@ class CodePreviewView extends HTMLElement
         this._htmlTab.textContent = 'HTML';
 
         this._cssTab = document.createElement('button');
-        this._cssTab.className = 'tab';
+        this._cssTab.classList.add('tab');
         this._cssTab.type = 'button';
         this._cssTab.setAttribute('role', 'tab');
         this._cssTab.id = 'css-tab';
@@ -245,7 +245,7 @@ class CodePreviewView extends HTMLElement
         tabsContainer.append(this._htmlTab, this._cssTab);
 
         this._htmlOutputPre = document.createElement('pre');
-        this._htmlOutputPre.className = 'output';
+        this._htmlOutputPre.classList.add('output');
         this._htmlOutputPre.id = 'html-output';
         this._htmlOutputPre.setAttribute('role', 'tabpanel');
         this._htmlOutputPre.setAttribute('aria-labelledby', 'html-tab');
@@ -254,7 +254,7 @@ class CodePreviewView extends HTMLElement
         this._htmlOutputPre.appendChild(this._htmlOutputCode);
 
         this._cssOutputPre = document.createElement('pre');
-        this._cssOutputPre.className = 'output';
+        this._cssOutputPre.classList.add('output');
         this._cssOutputPre.id = 'css-output';
         this._cssOutputPre.setAttribute('role', 'tabpanel');
         this._cssOutputPre.setAttribute('aria-labelledby', 'css-tab');

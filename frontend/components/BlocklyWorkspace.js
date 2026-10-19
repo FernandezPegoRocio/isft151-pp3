@@ -1,6 +1,7 @@
 // BlocklyWorkspace.js — el lienzo de Blockly, en MVC:
 //
-//   - WorkspaceModel      extends EventTarget -> guarda el HTML generado y avisa con 'changed'
+//   - WorkspaceModel      extends EventTarget -> guarda el HTML generado y el estado del lienzo
+//                                                (RF11: persistencia local) y avisa con 'changed'
 //   - WorkspaceView       extends HTMLElement -> el lienzo de Blockly; despacha 'request'
 //   - WorkspaceController                     -> resuelve el pedido de la Vista, actualiza el
 //                                                Modelo y anuncia hacia afuera
@@ -78,12 +79,17 @@ function workspaceToData(workspace, generator)
 // MODELO
 // Guarda el HTML generado a partir de los bloques y avisa cuando cambia.
 // No sabe nada de Blockly ni de la pantalla.
+// Clave del localStorage donde se guarda el lienzo (RF11)
+const WORKSPACE_STORAGE_KEY = 'webcraft:workspace';
+
+
 class WorkspaceModel extends EventTarget
 {
     constructor()
     {
         super();
         this._html = '';
+        this._state = null;
     }
 
     getHtml()
@@ -91,10 +97,73 @@ class WorkspaceModel extends EventTarget
         return this._html;
     }
 
-    setHtml(html)
+    getState()
+    {
+        return this._state;
+    }
+
+    // Guarda el HTML y el estado del lienzo. Cada cambio queda guardado
+    // automáticamente en el navegador, sin que el estudiante haga nada.
+    setProject(html, state)
     {
         this._html = html || '';
+        this._state = state || null;
+        this.saveToStorage();
         this.changed();
+    }
+
+    // Guarda el estado del lienzo en el localStorage (devuelve false si falla,
+    // por ejemplo si el navegador no deja guardar o no hay espacio)
+    saveToStorage()
+    {
+        try
+        {
+            localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(this._state));
+            return true;
+        }
+        catch (error)
+        {
+            return false;
+        }
+    }
+
+    // Lee el estado guardado en el localStorage (o null si no hay nada
+    // o si lo que hay está dañado)
+    loadFromStorage()
+    {
+        try
+        {
+            let saved = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : null;
+        }
+        catch (error)
+        {
+            return null;
+        }
+    }
+
+    // Arma el contenido del archivo .json del proyecto
+    toProjectJson(state)
+    {
+        return JSON.stringify({
+            app: 'webcraft',
+            version: 1,
+            workspace: state
+        }, null, 2);
+    }
+
+    // Lee el contenido de un archivo .json de proyecto. Si no es un archivo
+    // de WebCraft válido, lanza un error.
+    parseProjectJson(text)
+    {
+        let data = JSON.parse(text);
+
+        if (!data || data.app !== 'webcraft' || !data.workspace)
+        {
+            throw new Error('El archivo no es un proyecto de WebCraft');
+        }
+
+        return data.workspace;
     }
 
     changed()
@@ -116,7 +185,7 @@ class WorkspaceView extends HTMLElement
         super();
 
         this.container = document.createElement('div');
-        this.container.className = 'blockly-workspace-container';
+        this.container.classList.add('blockly-workspace-container');
         this.appendChild(this.container);
 
         this.workspace = null;
@@ -149,6 +218,45 @@ class WorkspaceView extends HTMLElement
         return workspaceToData(this.workspace, this.generator).html;
     }
 
+    // Estado del lienzo como un objeto (se puede guardar como JSON)
+    getState()
+    {
+        return Blockly.serialization.workspaces.save(this.workspace);
+    }
+
+    // Reemplaza lo que hay en el lienzo por el estado que le pasan.
+    // Los eventos se apagan mientras carga para no disparar un cambio por cada bloque.
+    // Si el estado no se puede cargar, vuelve a dejar el lienzo como estaba y
+    // avisa con un error.
+    setState(state)
+    {
+        let previous = Blockly.serialization.workspaces.save(this.workspace);
+
+        Blockly.Events.disable();
+
+        try
+        {
+            this.workspace.clear();
+            Blockly.serialization.workspaces.load(state, this.workspace);
+        }
+        catch (error)
+        {
+            this.workspace.clear();
+            Blockly.serialization.workspaces.load(previous, this.workspace);
+            throw error;
+        }
+        finally
+        {
+            Blockly.Events.enable();
+        }
+    }
+
+    // Muestra un mensaje al estudiante
+    showMessage(text)
+    {
+        window.alert(text);
+    }
+
     // EXCEPCIÓN Blockly.inject necesita que el elemento ya esté
     // conectado al documento para poder medir el lienzo.
     connectedCallback()
@@ -163,6 +271,12 @@ class WorkspaceView extends HTMLElement
         Blockly.svgResize(this.workspace);
 
         this.workspace.addChangeListener(this._onBlocklyChange);
+
+        // El lienzo ya existe: le aviso al Controlador para que restaure
+        // el trabajo guardado (RF11)
+        this.dispatchEvent(new CustomEvent('request', {
+            detail: { action: 'workspace-ready' }
+        }));
     }
 
     disconnectedCallback()
@@ -221,9 +335,79 @@ class WorkspaceController
     // Pedido de la Vista: según la acción, acá se resuelve qué hacer
     onViewRequest(event)
     {
-        if (event.detail.action === 'workspace-changed')
+        let action = event.detail.action;
+
+        if (action === 'workspace-changed')
         {
-            this._model.setHtml(this._view.getHtml());
+            // Cada cambio se guarda solo (guardado automático)
+            this.updateModel();
+        }
+        else if (action === 'workspace-ready')
+        {
+            // Al abrir la aplicación, se recupera el trabajo guardado
+            let saved = this._model.loadFromStorage();
+
+            if (saved)
+            {
+                this.restoreState(saved);
+            }
+        }
+    }
+
+    // Pasa lo que hay en el lienzo al Modelo (HTML + estado)
+    updateModel()
+    {
+        this._model.setProject(this._view.getHtml(), this._view.getState());
+    }
+
+    // Carga un estado en el lienzo y actualiza todo. Si el estado no se puede
+    // cargar (por ejemplo, tiene bloques desconocidos), devuelve false.
+    restoreState(state)
+    {
+        try
+        {
+            this._view.setState(state);
+        }
+        catch (error)
+        {
+            return false;
+        }
+
+        this.updateModel();
+        return true;
+    }
+
+    // Guardar a pedido: deja el estado actual guardado en el navegador
+    saveNow()
+    {
+        this.updateModel();
+        return this._model.saveToStorage();
+    }
+
+    // Contenido del archivo .json para descargar el proyecto
+    getProjectJson()
+    {
+        return this._model.toProjectJson(this._view.getState());
+    }
+
+    // Abrir un proyecto desde el contenido de un archivo .json
+    loadProjectJson(text)
+    {
+        let state = null;
+
+        try
+        {
+            state = this._model.parseProjectJson(text);
+        }
+        catch (error)
+        {
+            this._view.showMessage('No se pudo abrir el archivo: no es un proyecto de WebCraft válido.');
+            return;
+        }
+
+        if (!this.restoreState(state))
+        {
+            this._view.showMessage('No se pudo abrir el archivo: tiene bloques que WebCraft no conoce.');
         }
     }
 

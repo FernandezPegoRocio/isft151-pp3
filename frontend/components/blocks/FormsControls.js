@@ -76,25 +76,25 @@ function getCategory()
 function registerGenerators(generator)
 {
     generator.forBlock['html_input_text'] = function(block) {
-        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '""';
-        var placeholder = generator.valueToCode(block, 'PLACEHOLDER', generator.ORDER_ATOMIC) || '""';
-        return '<input type="text" name=' + name + ' placeholder=' + placeholder + '>\n';
+        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '';
+        var placeholder = generator.valueToCode(block, 'PLACEHOLDER', generator.ORDER_ATOMIC) || '';
+        return '<input type="text" name=' + generator.quoteAttr(name) + ' placeholder=' + generator.quoteAttr(placeholder) + '>\n';
     };
 
     generator.forBlock['html_input_checkbox'] = function(block) {
-        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '""';
-        var value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '""';
-        return '<input type="checkbox" name=' + name + ' value=' + value + '>\n';
+        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '';
+        var value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '';
+        return '<input type="checkbox" name=' + generator.quoteAttr(name) + ' value=' + generator.quoteAttr(value) + '>\n';
     };
 
     generator.forBlock['html_input_radio'] = function(block) {
-        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '""';
-        var value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '""';
-        return '<input type="radio" name=' + name + ' value=' + value + '>\n';
+        var name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '';
+        var value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '';
+        return '<input type="radio" name=' + generator.quoteAttr(name) + ' value=' + generator.quoteAttr(value) + '>\n';
     };
 
     generator.forBlock['html_button'] = function(block) {
-        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '""';
+        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '';
         return '<button>' + text + '</button>\n';
     };
 }

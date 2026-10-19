@@ -4,8 +4,48 @@
 //   - registerBlocks()          
 //   - getCategory()             
 //   - registerGenerators  
-// Mientras se cumpla, este archivo se puede editar libremente
-// sin tocar Toolbox.js ni BlocklyWorkspace.js.
+
+function splitContent(generator, block, inputName)
+{
+    let styles = [];
+    let html = '';
+    let child = block.getInputTargetBlock(inputName);
+
+    while (child)
+    {
+        // true = solo este bloque (el siguiente lo recorre este ciclo)
+        let code = generator.blockToCode(child, true);
+
+        if (child.type.indexOf('css_') === 0)
+        {
+            if (code.trim())
+            {
+                styles.push(code.trim());
+            }
+        }
+        else
+        {
+            html += code;
+        }
+
+        child = child.getNextBlock();
+    }
+
+    return { style: styles.join(' '), html: html };
+}
+
+
+// Arma ' style="..."' (con comillas siempre bien cerradas) o '' si no hay estilos
+function styleAttr(generator, style)
+{
+    return style ? ' style=' + generator.quoteAttr(style) : '';
+}
+
+
+function indentContent(generator, html)
+{
+    return html ? generator.prefixLines(html, generator.INDENT) : '';
+}
 
 function registerBlocks()
 {
@@ -90,18 +130,19 @@ function getCategory()
 function registerGenerators(generator)
 {
     generator.forBlock['html_root'] = function(block) {
-        var bodyCode = generator.statementToCode(block, 'BODY') || '';
-        return '<!DOCTYPE html>\n<html>\n' + bodyCode + '\n</html>\n';
+        // Los estilos sueltos dentro de <html> se ignoran: van dentro de <body> o <div>
+        var parts = splitContent(generator, block, 'BODY');
+        return '<!DOCTYPE html>\n<html>\n' + parts.html + '\n</html>\n';
     };
 
     generator.forBlock['html_body'] = function(block) {
-        var content = generator.statementToCode(block, 'CONTENIDO') || '';
-        return '<body>\n' + content + '</body>\n';
+        var parts = splitContent(generator, block, 'CONTENIDO');
+        return '<body' + styleAttr(generator, parts.style) + '>\n' + indentContent(generator, parts.html) + '</body>\n';
     };
 
     generator.forBlock['html_div'] = function(block) {
-        var content = generator.statementToCode(block, 'CONTENIDO') || '';
-        return '<div>\n' + content + '</div>\n';
+        var parts = splitContent(generator, block, 'CONTENIDO');
+        return '<div' + styleAttr(generator, parts.style) + '>\n' + indentContent(generator, parts.html) + '</div>\n';
     };
 
     generator.forBlock['html_br'] = function() {

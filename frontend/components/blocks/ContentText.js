@@ -47,7 +47,6 @@ function registerBlocks()
                 this.appendDummyInput().appendField('Enlace <a>');
                 this.appendValueInput('HREF').setCheck('String').appendField('URL (href)');
                 this.appendValueInput('TEXTO').setCheck('String').appendField('texto del enlace');
-                //this.appendStatementInput('TEXTO').setCheck(null).appendField('texto del enlace');
                 this.setPreviousStatement(true, null);
                 this.setNextStatement(true, null);
                 this.setColour(120);
@@ -76,26 +75,24 @@ function getCategory()
 function registerGenerators(generator)
 {
     generator.forBlock['html_p'] = function(block) {
-        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '""';
+        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '';
         return '<p>' + text + '</p>\n';
     };
 
     generator.forBlock['html_span'] = function(block) {
-        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '""';
+        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '';
         return '<span>' + text + '</span>\n';
     };
 
     generator.forBlock['html_img'] = function(block) {
-        var src = generator.valueToCode(block, 'SRC', generator.ORDER_ATOMIC) || '""';
-        var alt = generator.valueToCode(block, 'ALT', generator.ORDER_ATOMIC) || '""';
-       // return '<img src=' + src + ' alt=' + alt + '>\n';
+        var src = generator.valueToCode(block, 'SRC', generator.ORDER_ATOMIC) || '';
+        var alt = generator.valueToCode(block, 'ALT', generator.ORDER_ATOMIC) || '';
         return '<img src=' + generator.quoteAttr(src) + ' alt=' + generator.quoteAttr(alt) + '>\n';
     };
 
     generator.forBlock['html_a'] = function(block) {
-        var href = generator.valueToCode(block, 'HREF', generator.ORDER_ATOMIC) || '""';
-        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '""';
-        //return '<a href=' + href + '>' + text + '</a>\n';
+        var href = generator.valueToCode(block, 'HREF', generator.ORDER_ATOMIC) || '';
+        var text = generator.valueToCode(block, 'TEXTO', generator.ORDER_ATOMIC) || '';
         return '<a href=' + generator.quoteAttr(href) + '>' + text + '</a>\n';
     };
 

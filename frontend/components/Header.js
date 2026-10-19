@@ -3,16 +3,11 @@
 //   - HeaderModel      extends EventTarget -> guarda el último HTML generado y sabe guardarlo
 //   - HeaderView       extends HTMLElement -> el título y los botones; despacha 'request'
 //   - HeaderController                     -> resuelve cada botón
-//
-// Botones y eventos que sube la cabecera hacia la aplicación (bubbles):
-// * request-preview       : "Previsualizar HTML"
-// * request-save          : "Guardar" (guarda el proyecto en el localStorage)
-// * request-download-html : "Descargar HTML"
-// * request-export-png    : "Exportar a PNG"
+
 
 
 // MODELO
-// Guarda el HTML actual y se ocupa de la persistencia (RF11).
+// Guarda el último HTML generado. La persistencia del lienzo (RF11) la maneja el Modelo del workspace.
 class HeaderModel extends EventTarget
 {
     constructor()
@@ -29,13 +24,6 @@ class HeaderModel extends EventTarget
     setHtml(html)
     {
         this._html = html || '';
-        this.changed();
-    }
-
-    // Guarda el proyecto en el localStorage
-    save()
-    {
-        localStorage.setItem('webcraft:html', this._html);
         this.changed();
     }
 
@@ -74,11 +62,13 @@ class HeaderView extends HTMLElement
         title.appendChild(document.createTextNode('WebCraft - Entorno Blockly'));
 
         this.actions = document.createElement('div');
-        this.actions.className = 'acciones';
+        this.actions.classList.add('acciones');
         this.actions.appendChild(createHeaderButton('preview', 'Previsualizar HTML'));
         this.actions.appendChild(createHeaderButton('save', 'Guardar'));
         this.actions.appendChild(createHeaderButton('download-html', 'Descargar HTML'));
         this.actions.appendChild(createHeaderButton('export-png', 'Exportar a PNG'));
+        this.actions.appendChild(createHeaderButton('save-project', 'Descargar proyecto'));
+        this.actions.appendChild(createHeaderButton('open-project', 'Abrir proyecto'));
 
         header.appendChild(title);
         header.appendChild(this.actions);
@@ -155,11 +145,6 @@ class HeaderController
     onViewRequest(event)
     {
         let action = event.detail.action;
-
-        if (action === 'save')
-        {
-            this._model.save();
-        }
 
         this._view.announce('request-' + action, this._model.getHtml());
     }

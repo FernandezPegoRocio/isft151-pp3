@@ -78,27 +78,34 @@ function getCategory() {
     };
 }
 
+
+// Un bloque de estilo solo tiene sentido dentro de un contenedor (<body> o <div>),
+// que es quien lo pasa al atributo style. Si está suelto, no genera nada.
+function declaration(block, text) {
+    return block.getSurroundParent() ? text + '\n' : '';
+}
+
 function registerGenerators(generator) {
     generator.forBlock['css_background_color'] = function(block) {
         const color = block.getFieldValue('BG_COLOR');
-        return `background-color: ${color};\n`;
+        return declaration(block, `background-color: ${color};`);
     };
 
     generator.forBlock['css_spacing'] = function(block) {
         const prop = block.getFieldValue('PROP');
         const valor = block.getFieldValue('VALOR');
-        return `${prop}: ${valor};\n`;
+        return declaration(block, `${prop}: ${valor};`);
     };
 
     generator.forBlock['css_border'] = function(block) {
         const borderVal = block.getFieldValue('BORDER_VAL');
-        return `border: ${borderVal};\n`;
+        return declaration(block, `border: ${borderVal};`);
     };
 
     generator.forBlock['css_dimensions'] = function(block) {
         const dim = block.getFieldValue('DIM');
         const size = block.getFieldValue('SIZE');
-        return `${dim}: ${size};\n`;
+        return declaration(block, `${dim}: ${size};`);
     };
 }
 

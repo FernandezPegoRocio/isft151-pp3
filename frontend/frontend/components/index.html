@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
+    <title>WebCraft — Entorno Blockly</title>
+    <style>
+        webcraft-application {
+            display: block;
+        }
+
+        .blockly-workspace-container {
+            width: 100%;
+            height: 600px;
+        }
+
+        .webcraft-workspace-area {
+            display: flex;
+            gap: 8px;
+            height: 600px;
+        }
+        .webcraft-workspace-area > blockly-workspace-view {
+            flex: 2;
+            min-width: 500px;
+        }
+
+        .webcraft-preview-area {
+            flex: 1;
+            min-width: 250px;
+            display: grid;
+        }
+
+        .webcraft-preview-area > * {
+            grid-area: 1 / 1;
+        }
+    </style>
+    <script src="https://unpkg.com/blockly/blockly_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/blocks_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/msg/es.js"></script>
+
+    <!-- script para exportar a PNG -->
+    <script src="https://unpkg.com/html2canvas/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <script type="module" src="./WebCraftApplication.js"></script>
+</body>
+</html>

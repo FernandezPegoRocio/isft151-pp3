@@ -79,14 +79,20 @@ class LivePreviewView extends HTMLElement
         `;
 
         let header = document.createElement('div');
-        header.className = 'preview-header';
+        header.classList.add('preview-header');
         header.textContent = 'Vista Previa en Vivo';
 
         this._iframe = document.createElement('iframe');
         this._iframe.id = 'preview-frame';
-        this._iframe.setAttribute('sandbox', 'allow-same-origin');
+        this._iframe.setAttribute('sandbox', 'allow-scripts');
 
         this.shadowRoot.append(style, header, this._iframe);
+    }
+
+    // El cuerpo del documento que se ve en el iframe (lo usa la exportación a PNG)
+    getBody()
+    {
+        return this._iframe.contentDocument ? this._iframe.contentDocument.body : null;
     }
 
     set state({ htmlCode = '' } = {})
