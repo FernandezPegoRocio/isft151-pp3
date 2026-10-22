@@ -1,0 +1,189 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: #f8f9fc;
+    color: #34364a;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+webcraft-application {
+    display: block;
+}
+
+webcraft-header {
+    display: block;
+    margin-bottom: 16px;
+}
+
+webcraft-header > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 24px;
+    border: 1px solid #e7e4f2;
+    border-radius: 16px;
+    background: linear-gradient(115deg, #f1efff 0%, #fdf2f5 100%);
+    box-shadow: 0 5px 18px rgb(74 67 112 / 7%);
+}
+
+webcraft-header h1 {
+    margin: 0;
+    color: #45415f;
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    font-weight: 650;
+    letter-spacing: -0.03em;
+}
+
+webcraft-header .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+webcraft-header .acciones button {
+    min-height: 38px;
+    padding: 9px 13px;
+    border: 1px solid #ded9ef;
+    border-radius: 10px;
+    background: #EDF8FB;
+    color: #514c6d;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+webcraft-header .acciones button:hover {
+    transform: translateY(-1px);
+    border-color: #c9c0e8;
+    background: #f9f7ff;
+    box-shadow: 0 3px 9px rgb(74 67 112 / 10%);
+}
+
+webcraft-header .acciones button:focus-visible {
+    outline: 3px solid #bdb2ed;
+    outline-offset: 2px;
+}
+
+webcraft-header .acciones button[data-action="preview"] {
+    border-color: #c8e5dd;
+    background: #eaf7f2;
+    color: #356b5b;
+}
+
+webcraft-header .acciones button[data-action="save"] {
+    border-color: #d8d0f0;
+    background: #f0edfb;
+    color: #5b4b8a;
+}
+
+webcraft-header .acciones button[data-action="download-html"] {
+    border-color: #d8d0f0;
+    background: #EDF8FB;
+    color: #5b4b8a;
+}
+
+webcraft-header .acciones button[data-action="export-png"] {
+    border-color: #d8d0f0;
+    background: #FBFBED;
+    color: #5b4b8a;
+}
+
+webcraft-header .acciones button[data-action="save-project"] {
+    border-color: #d8d0f0;
+    background: #FBEDF2;
+    color: #5b4b8a;
+}
+
+webcraft-header .acciones button[data-action="open-project"] {
+    border-color: #d8d0f0;
+    background: #EFF2E4;
+    color: #5b4b8a;
+}
+
+.blocklyToolboxDiv {
+    border: 1px solid #e7e4f2;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f1efff 0%, #fdf2f5 100%);
+    box-shadow: 0 5px 18px rgb(74 67 112 / 7%);
+    font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+.blocklyToolboxCategory {
+    min-height: 42px;
+    margin: 4px 6px;
+    padding: 0 10px;
+    border-radius: 9px;
+    color: #45415f;
+    transition: background-color 150ms ease;
+}
+
+.blocklyToolboxCategoryLabel {
+    color: #45415f !important; 
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.blocklyToolboxCategory:hover,
+.blocklyToolboxCategory[aria-selected="true"] {
+    background-color: rgb(255 255 255 / 75%);
+}
+
+.blocklyToolboxCategory[aria-selected="true"] .blocklyToolboxCategoryLabel {
+    color: #5b4b8a !important;
+}
+
+.blocklyTreeRow {
+    height: 40px;
+    padding: 0 10px;
+}
+
+.blockly-workspace-container {
+    width: 100%;
+    height: 600px;
+}
+
+.webcraft-workspace-area {
+    display: flex;
+    gap: 8px;
+    height: 600px;
+}
+
+.webcraft-workspace-area > blockly-workspace-view {
+    flex: 2;
+    min-width: 500px;
+}
+
+.webcraft-preview-area {
+    display: grid;
+    flex: 1;
+    min-width: 250px;
+}
+
+.webcraft-preview-area > * {
+    grid-area: 1 / 1;
+}
+
+@media (max-width: 900px) {
+    body {
+        padding: 14px;
+    }
+
+    webcraft-header > header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px;
+    }
+
+    webcraft-header .acciones {
+        justify-content: flex-start;
+    }
+}

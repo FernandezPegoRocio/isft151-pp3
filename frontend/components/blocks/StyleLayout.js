@@ -5,10 +5,10 @@
 function registerBlocks() {
     // 1. Color de fondo
     Blockly.Blocks['css_background_color'] = {
-        init: function() {
+         init: function() {
             this.appendDummyInput()
                 .appendField("color de fondo")
-                .appendField(new Blockly.FieldTextInput("#ffffff"), "BG_COLOR");
+                .appendField(new Blockly.FieldColour("#ffffff"), "BG_COLOR");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(160);
@@ -38,7 +38,14 @@ function registerBlocks() {
         init: function() {
             this.appendDummyInput()
                 .appendField("borde (border)")
-                .appendField(new Blockly.FieldTextInput("1px solid #000000"), "BORDER_VAL");
+                .appendField(new Blockly.FieldTextInput("1px"), "BORDER_WIDTH")
+                .appendField(new Blockly.FieldDropdown([
+                    ["sólido", "solid"],
+                    ["discontinuo", "dashed"],
+                    ["punteado", "dotted"],
+                    ["doble", "double"]
+                ]), "BORDER_STYLE")
+                .appendField(new Blockly.FieldColour("#000000"), "BORDER_COLOR");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(160);
@@ -98,8 +105,10 @@ function registerGenerators(generator) {
     };
 
     generator.forBlock['css_border'] = function(block) {
-        const borderVal = block.getFieldValue('BORDER_VAL');
-        return declaration(block, `border: ${borderVal};`);
+        const width = block.getFieldValue('BORDER_WIDTH');
+        const style = block.getFieldValue('BORDER_STYLE');
+        const color = block.getFieldValue('BORDER_COLOR');
+        return declaration(block, `border: ${width} ${style} ${color};`);
     };
 
     generator.forBlock['css_dimensions'] = function(block) {

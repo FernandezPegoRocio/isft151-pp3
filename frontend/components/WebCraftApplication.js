@@ -16,7 +16,7 @@ import { CodePreviewView, CodePreviewModel, CodePreviewController } from './Code
 
 
 // Baja un Blob como archivo: crea un <a> temporal, lo "clickea" y lo descarta.
-function downloadBlob(blob, fileName)
+function downloadBlob(blob, fileName)  //un objeto blob es un objeto que representa un archivo de datos de tipo binario, como una imagen o un archivo de audio.
 {
     let url = URL.createObjectURL(blob);
     let link = document.createElement('a');

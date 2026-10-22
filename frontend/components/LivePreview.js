@@ -84,7 +84,7 @@ class LivePreviewView extends HTMLElement
 
         this._iframe = document.createElement('iframe');
         this._iframe.id = 'preview-frame';
-        this._iframe.setAttribute('sandbox', 'allow-scripts');
+        this._iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts');
 
         this.shadowRoot.append(style, header, this._iframe);
     }

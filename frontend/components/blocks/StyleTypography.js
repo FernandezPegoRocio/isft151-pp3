@@ -16,7 +16,7 @@ function registerBlocks() {
         init: function() {
             this.appendDummyInput()
                 .appendField("color de texto")
-                .appendField(new Blockly.FieldTextInput("#333333"), "TEXT_COLOR");
+                .appendField(new Blockly.FieldColour("#333333"), "TEXT_COLOR");
             this.setPreviousStatement(true, null);
             this.setNextStatement(true, null);
             this.setColour(210);
