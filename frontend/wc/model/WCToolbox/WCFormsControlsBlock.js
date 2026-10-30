@@ -21,8 +21,6 @@ function registerBlocks()
             init: function() {
                 this.appendDummyInput().appendField('Checkbox');
                 this.appendValueInput('LABEL').setCheck('String').appendField('texto');
-                this.appendValueInput('NAME').setCheck('String').appendField('nombre');
-                this.appendValueInput('VALUE').setCheck('String').appendField('valor');
                 this.setPreviousStatement(true, WC_CHECK_ELEMENT);
                 this.setNextStatement(true, WC_CHECK_ELEMENT);
                 this.setColour(290);
@@ -37,7 +35,6 @@ function registerBlocks()
                 this.appendDummyInput().appendField('Radio Button');
                 this.appendValueInput('LABEL').setCheck('String').appendField('texto');
                 this.appendValueInput('NAME').setCheck('String').appendField('nombre grupo');
-                this.appendValueInput('VALUE').setCheck('String').appendField('valor');
                 this.setPreviousStatement(true, WC_CHECK_ELEMENT);
                 this.setNextStatement(true, WC_CHECK_ELEMENT);
                 this.setColour(290);
@@ -84,18 +81,15 @@ function registerGenerators(generator)
     };
 
     generator.forBlock['html_input_checkbox'] = function(block) {
-        let name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '';
-        let value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '';
         let label = generator.valueToCode(block, 'LABEL', generator.ORDER_ATOMIC) || '';
-        let input = '<input type="checkbox" name=' + generator.quoteAttr(name) + ' value=' + generator.quoteAttr(value) + '>';
+        let input = '<input type="checkbox">';
         return label ? '<label>' + input + ' ' + label + '</label>\n' : input + '\n';
     };
 
     generator.forBlock['html_input_radio'] = function(block) {
         let name = generator.valueToCode(block, 'NAME', generator.ORDER_ATOMIC) || '';
-        let value = generator.valueToCode(block, 'VALUE', generator.ORDER_ATOMIC) || '';
         let label = generator.valueToCode(block, 'LABEL', generator.ORDER_ATOMIC) || '';
-        let input = '<input type="radio" name=' + generator.quoteAttr(name) + ' value=' + generator.quoteAttr(value) + '>';
+        let input = '<input type="radio" name=' + generator.quoteAttr(name) + '>';
         return label ? '<label>' + input + ' ' + label + '</label>\n' : input + '\n';
     };
 
