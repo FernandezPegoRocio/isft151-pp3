@@ -1,4 +1,4 @@
-<img src="./WebCraft/docs/logo.png" alt="WebCraft" width="180">
+<img src="./docs/logo.png" alt="WebCraft" width="180">
 
 &nbsp;
 
@@ -72,7 +72,7 @@ WebCraft combina el patrón **Modelo-Vista-Controlador (MVC)** con **Web Compone
 Los componentes se comunican mediante eventos personalizados. Cuando el workspace cambia, la aplicación distribuye la actualización a los paneles que necesitan reflejar el nuevo contenido.
 
 <p align="center">
-  <img src="./WebCraft/docs/arquitectura.png" alt="Diagrama de arquitectura de WebCraft" width="85%">
+  <img src="./docs/arquitectura.png" alt="Diagrama de arquitectura de WebCraft" width="85%">
 </p>
 
 &nbsp;
@@ -105,7 +105,7 @@ Los bloques de estilos se aplican dentro de contenedores válidos, lo que permit
 6. El usuario puede guardar el proyecto o exportar el resultado.
 
 <p align="center">
-  <img src="./WebCraft/docs/flujo.png" alt="Diagrama del flujo de WebCraft" width="85%">
+  <img src="./docs/flujo.png" alt="Diagrama del flujo de WebCraft" width="85%">
 </p>
 
 &nbsp;
